@@ -3,9 +3,7 @@ import {
   getURLQueries
 } from "../../../src/common/utils/utils";
 import { HeaderConstants } from "../../../src/table/utils/constants";
-import TableEntityTestConfig from "../models/table.entity.test.config";
-
-const key1 = Buffer.from(TableEntityTestConfig.sharedKey, "base64");
+import { ITableEntityTestConfig } from "./TableTestConfigFactory";
 
 /**
  * Creates the Axios request options using shared key lite
@@ -22,11 +20,19 @@ export function axiosRequestConfig(
   url: string,
   path: string,
   headersIn: any,
+  config: ITableEntityTestConfig,
   productionStyle: boolean = false
 ): any {
-  const stringToSign = createStringToSignForSharedKeyLite(url, path, headersIn, productionStyle);
+  const stringToSign = createStringToSignForSharedKeyLite(
+    url,
+    path,
+    headersIn,
+    config,
+    productionStyle
+  );
+  const key1 = Buffer.from(config.sharedKey, "base64");
   const signature1 = computeHMACSHA256(stringToSign, key1);
-  const authValue = `SharedKeyLite ${TableEntityTestConfig.accountName}:${signature1}`;
+  const authValue = `SharedKeyLite ${config.accountName}:${signature1}`;
   const headers = Object.assign(headersIn, { Authorization: authValue });
   return {
     headers
@@ -48,6 +54,7 @@ export function createStringToSignForSharedKeyLite(
   url: string,
   path: string,
   headers: any,
+  config: ITableEntityTestConfig,
   productionStyle: boolean
 ): string {
   const stringToSign: string =
@@ -58,8 +65,10 @@ export function createStringToSignForSharedKeyLite(
     "\n" +
     getCanonicalizedResourceString(
       url,
-      TableEntityTestConfig.accountName,
-      productionStyle ? `/${path.replace(/'/g, "%27")}`: `/${TableEntityTestConfig.accountName}/${path.replace(/'/g, "%27")}`
+      config.accountName,
+      productionStyle
+        ? `/${path.replace(/'/g, "%27")}`
+        : `/${config.accountName}/${path.replace(/'/g, "%27")}`
     );
 
   return stringToSign;
@@ -146,8 +155,8 @@ export function getCanonicalizedResourceString(
  * @returns {string}
  */
 function getPath(url: string): string {
-  if (url.indexOf("-secondary") !== -1){
-    return url.replace('-secondary', '');
+  if (url.indexOf("-secondary") !== -1) {
+    return url.replace("-secondary", "");
   }
   return url;
 }

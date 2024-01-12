@@ -2,7 +2,7 @@
 // body and headers from debug logs for resubmission and repro
 import axios, { AxiosResponse } from "axios";
 import { axiosRequestConfig } from "./table.entity.tests.utils.for.rest";
-import TableEntityTestConfig from "../models/table.entity.test.config";
+import { ITableEntityTestConfig } from "./TableTestConfigFactory";
 import {
   AccountSasPermissions,
   AzureNamedKeyCredential,
@@ -24,14 +24,13 @@ import {
 export async function postToAzurite(
   path: string,
   body: string,
-  headers: any
+  headers: any,
+  config: ITableEntityTestConfig
 ): Promise<AxiosResponse<any, any>> {
-  const url = `${TableEntityTestConfig.protocol}://${
-    TableEntityTestConfig.host
-  }:${TableEntityTestConfig.port}/${
-    TableEntityTestConfig.accountName
-  }/${path}/?${generateSas()}`;
-  const requestConfig = axiosRequestConfig(url, path, headers);
+  const url = `${config.protocol}://${config.host}:${config.port}/${
+    config.accountName
+  }/${path}/?${generateSas(config)}`;
+  const requestConfig = axiosRequestConfig(url, path, headers, config);
   const result = await axios.post(url, body, requestConfig);
   return result;
 }
@@ -52,12 +51,13 @@ export async function postToAzuriteProductionUrl(
   hostName: string,
   path: string,
   body: string,
-  headers: any
+  headers: any,
+  config: ITableEntityTestConfig
 ): Promise<AxiosResponse<any, any>> {
-  const url = `${TableEntityTestConfig.protocol}://${
-    hostName
-  }:${TableEntityTestConfig.port}/${path}/?${generateSas()}`;
-  const requestConfig = axiosRequestConfig(url, path, headers, true);
+  const url = `${config.protocol}://${hostName}:${
+    config.port
+  }/${path}/?${generateSas(config)}`;
+  const requestConfig = axiosRequestConfig(url, path, headers, config, true);
   const result = await axios.post(url, body, requestConfig);
   return result;
 }
@@ -73,13 +73,14 @@ export async function postToAzuriteProductionUrl(
 export async function getToAzurite(
   path: string,
   headers: any,
+  config: ITableEntityTestConfig,
   queryString?: string
 ): Promise<AxiosResponse<any, any>> {
   if (undefined === queryString) {
     queryString = "";
   }
-  const url = `${TableEntityTestConfig.protocol}://${TableEntityTestConfig.host}:${TableEntityTestConfig.port}/${TableEntityTestConfig.accountName}/${path}${queryString}`;
-  const requestConfig = axiosRequestConfig(url, path, headers);
+  const url = `${config.protocol}://${config.host}:${config.port}/${config.accountName}/${path}${queryString}`;
+  const requestConfig = axiosRequestConfig(url, path, headers, config);
   const result = await axios.get(url, requestConfig);
   return result;
 }
@@ -97,13 +98,14 @@ export async function getToAzuriteProductionUrl(
   hostName: string,
   path: string,
   headers: any,
+  config: ITableEntityTestConfig,
   queryString?: string
 ): Promise<AxiosResponse<any, any>> {
   if (undefined === queryString) {
     queryString = "";
   }
-  const url = `${TableEntityTestConfig.protocol}://${hostName}:${TableEntityTestConfig.port}/${path}${queryString}`;
-  const requestConfig = axiosRequestConfig(url, path, headers, true);
+  const url = `${config.protocol}://${hostName}:${config.port}/${path}${queryString}`;
+  const requestConfig = axiosRequestConfig(url, path, headers, config, true);
   const result = await axios.get(url, requestConfig);
   return result;
 }
@@ -114,11 +116,11 @@ export async function getToAzuriteProductionUrl(
  * This needs to be appended to the URL.
  * @return {*}  {string}
  */
-function generateSas(): string {
+function generateSas(config: ITableEntityTestConfig): string {
   // We need a NamedKeyCredential to generate the SAS token
   const cred = new AzureNamedKeyCredential(
-    TableEntityTestConfig.accountName,
-    TableEntityTestConfig.sharedKey
+    config.accountName,
+    config.sharedKey
   );
   // We set the permissions we want on the SAS token
   // If non is specified, only list is granted
@@ -159,14 +161,13 @@ function generateSas(): string {
 export async function patchToAzurite(
   path: string,
   body: string,
-  headers: any
+  headers: any,
+  config: ITableEntityTestConfig
 ): Promise<AxiosResponse<any, any>> {
-  const url = `${TableEntityTestConfig.protocol}://${
-    TableEntityTestConfig.host
-  }:${TableEntityTestConfig.port}/${
-    TableEntityTestConfig.accountName
-  }/${path}?${generateSas()}`;
-  const requestConfig = axiosRequestConfig(url, path, headers);
+  const url = `${config.protocol}://${config.host}:${config.port}/${
+    config.accountName
+  }/${path}?${generateSas(config)}`;
+  const requestConfig = axiosRequestConfig(url, path, headers, config);
   const result = await axios.patch(url, body, requestConfig);
   return result;
 }
@@ -183,15 +184,14 @@ export async function patchToAzurite(
 export async function putToAzurite(
   path: string,
   body: string,
-  headers: any
+  headers: any,
+  config: ITableEntityTestConfig
 ): Promise<AxiosResponse<any, any>> {
-  const url = `${TableEntityTestConfig.protocol}://${
-    TableEntityTestConfig.host
-  }:${TableEntityTestConfig.port}/${
-    TableEntityTestConfig.accountName
-  }/${path}?${generateSas()}`;
+  const url = `${config.protocol}://${config.host}:${config.port}/${
+    config.accountName
+  }/${path}?${generateSas(config)}`;
   try {
-    const requestConfig = axiosRequestConfig(url, path, headers);
+    const requestConfig = axiosRequestConfig(url, path, headers, config);
     const result = await axios.put(url, body, requestConfig);
     return result;
   } catch (err: any) {
@@ -211,14 +211,13 @@ export async function putToAzurite(
 export async function mergeToAzurite(
   path: string,
   body: string,
-  headers: any
+  headers: any,
+  config: ITableEntityTestConfig
 ): Promise<AxiosResponse<any, any>> {
-  const url = `${TableEntityTestConfig.protocol}://${
-    TableEntityTestConfig.host
-  }:${TableEntityTestConfig.port}/${
-    TableEntityTestConfig.accountName
-  }/${path}?${generateSas()}`;
-  const requestConfig = axiosRequestConfig(url, path, headers);
+  const url = `${config.protocol}://${config.host}:${config.port}/${
+    config.accountName
+  }/${path}?${generateSas(config)}`;
+  const requestConfig = axiosRequestConfig(url, path, headers, config);
   const result = await axios({
     method: "merge",
     url,
@@ -240,14 +239,13 @@ export async function mergeToAzurite(
 export async function deleteToAzurite(
   path: string,
   body: string,
-  headers: any
+  headers: any,
+  config: ITableEntityTestConfig
 ): Promise<AxiosResponse<any, any>> {
-  const url = `${TableEntityTestConfig.protocol}://${
-    TableEntityTestConfig.host
-  }:${TableEntityTestConfig.port}/${
-    TableEntityTestConfig.accountName
-  }/${path}?${generateSas()}`;
-  const requestConfig = axiosRequestConfig(url, path, headers);
+  const url = `${config.protocol}://${config.host}:${config.port}/${
+    config.accountName
+  }/${path}?${generateSas(config)}`;
+  const requestConfig = axiosRequestConfig(url, path, headers, config);
   const result = await axios({
     method: "delete",
     url,

@@ -19,12 +19,16 @@ import {
   putToAzurite
 } from "../utils/table.entity.tests.rest.submitter";
 import TableTestServerFactory from "../utils/TableTestServerFactory";
+import TableTestConfigFactory, {
+  ITableEntityTestConfig
+} from "../utils/TableTestConfigFactory";
 
 // Set true to enable debug log
 configLogger(false);
 
-describe("table Entity APIs REST tests", () => {
+const testConfig = TableTestConfigFactory.create(false, false);
 
+describe("table Entity APIs REST tests", () => {
   let server: TableServer;
 
   let reproFlowsTableName: string = getUniqueName("flows");
@@ -32,11 +36,11 @@ describe("table Entity APIs REST tests", () => {
   before(async () => {
     server = new TableTestServerFactory().createServer({
       metadataDBPath: "__tableTestsStorage__",
-      enableDebugLog: true,
-      debugLogFilePath: "",
+      enableDebugLog: testConfig.enableDebugLog,
+      debugLogFilePath: testConfig.debugLogPath,
       loose: false,
       skipApiVersionCheck: true,
-      https: false
+      https: testConfig.protocol === "https"
     });
     await server.start();
   });
@@ -63,7 +67,8 @@ describe("table Entity APIs REST tests", () => {
     const createTableResult = await postToAzurite(
       "Tables",
       body,
-      createTableHeaders
+      createTableHeaders,
+      testConfig
     );
     assert.strictEqual(createTableResult.status, 201);
 
@@ -80,7 +85,8 @@ describe("table Entity APIs REST tests", () => {
     const request1Result = await postToAzurite(
       "$batch",
       batchRequest1RawRequestString,
-      batchRequest1Headers
+      batchRequest1Headers,
+      testConfig
     );
     // we submitted the batch OK
     assert.strictEqual(request1Result.status, 202);
@@ -92,7 +98,8 @@ describe("table Entity APIs REST tests", () => {
         "x-ms-version": "2018-03-28",
         "x-ms-client-request-id": "7bbeb6b2-a1c7-4fed-8a3c-80f6b3e7db8c",
         accept: "application/json;odata=minimalmetadata"
-      }
+      },
+      testConfig
     );
     assert.strictEqual(request2Result.status, 200);
 
@@ -103,7 +110,8 @@ describe("table Entity APIs REST tests", () => {
         "x-ms-version": "2018-03-28",
         "x-ms-client-request-id": "41eb727e-1f85-4f53-b4e1-2df2628b2903",
         accept: "application/json;odata=minimalmetadata"
-      }
+      },
+      testConfig
     );
     assert.strictEqual(request3Result.status, 200);
 
@@ -120,7 +128,8 @@ describe("table Entity APIs REST tests", () => {
         accept: "application/json;odata=nometadata",
         "content-type":
           "multipart/mixed; boundary=batch_3e8c6583-146e-4326-835f-5f7321fc6711"
-      }
+      },
+      testConfig
     );
     // we submitted the batch OK
     assert.strictEqual(request4Result.status, 202);
@@ -132,7 +141,8 @@ describe("table Entity APIs REST tests", () => {
         "x-ms-version": "2018-03-28",
         "x-ms-client-request-id": "ceceedd3-4d7c-450f-a738-b83b21788d42",
         accept: "application/json;odata=minimalmetadata"
-      }
+      },
+      testConfig
     );
     assert.strictEqual(request5Result.status, 200);
 
@@ -143,7 +153,8 @@ describe("table Entity APIs REST tests", () => {
         "x-ms-version": "2018-03-28",
         "x-ms-client-request-id": "ceceedd3-4d7c-450f-a738-b83b21788d42",
         accept: "application/json;odata=minimalmetadata"
-      }
+      },
+      testConfig
     );
     assert.strictEqual(request6Result.status, 200);
     const result6Data: any = request6Result.data;
@@ -159,7 +170,8 @@ describe("table Entity APIs REST tests", () => {
         "x-ms-version": "2018-03-28",
         "x-ms-client-request-id": "00000000-4d7c-450f-a738-b83b21788d42",
         accept: "application/json;odata=minimalmetadata"
-      }
+      },
+      testConfig
     );
     assert.strictEqual(requestTestFlowResult.status, 200);
     const resultTestFlowData: any = request6Result.data;
@@ -174,7 +186,8 @@ describe("table Entity APIs REST tests", () => {
         "x-ms-version": "2018-03-28",
         "x-ms-client-request-id": "00000001-4d7c-450f-a738-b83b21788d42",
         accept: "application/json;odata=minimalmetadata"
-      }
+      },
+      testConfig
     );
     assert.strictEqual(request6Result.status, 200);
     const validateEtagResultData: any = validateEtagResult.data;
@@ -201,7 +214,8 @@ describe("table Entity APIs REST tests", () => {
         "content-type":
           "multipart/mixed; boundary=batch_558d985f-491c-496d-b4a2-311c3e1e075d",
         accept: "application/json;odata=nometadata"
-      }
+      },
+      testConfig
     );
     // we submitted the batch OK
     // current repro fails with precondition failed
@@ -215,7 +229,8 @@ describe("table Entity APIs REST tests", () => {
         "x-ms-version": "2018-03-28",
         "x-ms-client-request-id": "00000002-4d7c-450f-a738-b83b21788d42",
         accept: "application/json;odata=minimalmetadata"
-      }
+      },
+      testConfig
     ).catch((getErr) => {
       assert.strictEqual(getErr.response.status, 404);
     });
@@ -232,7 +247,8 @@ describe("table Entity APIs REST tests", () => {
     const createTableResult = await postToAzurite(
       "Tables",
       body,
-      createTableHeaders
+      createTableHeaders,
+      testConfig
     );
     assert.strictEqual(createTableResult.status, 201);
 
@@ -251,7 +267,8 @@ describe("table Entity APIs REST tests", () => {
           "multipart/mixed; boundary=batch_a10acba3-03e0-4200-b4da-a0cd4f0017f6",
         contentLength: 791,
         body: "ReadableStream"
-      }
+      },
+      testConfig
     );
 
     assert.strictEqual(patchRequestResult.status, 202);
@@ -274,7 +291,8 @@ describe("table Entity APIs REST tests", () => {
     const createTableResult = await postToAzurite(
       "Tables",
       body,
-      createTableHeaders
+      createTableHeaders,
+      testConfig
     );
     assert.strictEqual(createTableResult.status, 201);
 
@@ -291,7 +309,8 @@ describe("table Entity APIs REST tests", () => {
         },
         multipartContentType:
           "multipart/mixed; boundary=batch_f351702c-c8c8-48c6-af2c-91b809c651ce"
-      }
+      },
+      testConfig
     );
 
     assert.strictEqual(queryRequestResult.status, 202);
@@ -315,7 +334,8 @@ describe("table Entity APIs REST tests", () => {
     const createTableResult = await postToAzurite(
       "Tables",
       body,
-      createTableHeaders
+      createTableHeaders,
+      testConfig
     );
     assert.strictEqual(createTableResult.status, 201);
 
@@ -332,7 +352,8 @@ describe("table Entity APIs REST tests", () => {
         },
         multipartContentType:
           "multipart/mixed; boundary=batch_f351702c-c8c8-48c6-af2c-91b809c651ce"
-      }
+      },
+      testConfig
     );
 
     assert.strictEqual(queryRequestResult.status, 202);
@@ -358,7 +379,8 @@ describe("table Entity APIs REST tests", () => {
     const createTableResult = await postToAzurite(
       "Tables",
       body,
-      createTableHeaders
+      createTableHeaders,
+      testConfig
     );
     assert.strictEqual(createTableResult.status, 201);
 
@@ -372,7 +394,8 @@ describe("table Entity APIs REST tests", () => {
     const createEntityResult = await postToAzurite(
       reproFlowsTableName,
       `{"PartitionKey":"${partitionKey}","RowKey":"${rowKey}","Value":"01"}`,
-      createEntityHeaders
+      createEntityHeaders,
+      testConfig
     );
 
     assert.strictEqual(
@@ -403,7 +426,8 @@ describe("table Entity APIs REST tests", () => {
       const upsertBatchResult = await postToAzurite(
         "$batch",
         upsertBatchRequest,
-        upsertBatchHeaders
+        upsertBatchHeaders,
+        testConfig
       );
 
       assert.strictEqual(upsertBatchResult.status, 202, "Batch Upsert Failed.");
@@ -435,7 +459,8 @@ describe("table Entity APIs REST tests", () => {
     const createTableResult = await postToAzurite(
       "Tables",
       body,
-      createTableHeaders
+      createTableHeaders,
+      testConfig
     );
     assert.strictEqual(createTableResult.status, 201);
 
@@ -488,7 +513,8 @@ describe("table Entity APIs REST tests", () => {
             "x-ms-client-request-id": "req1",
             "Content-Type": "application/json",
             Accept: "application/json;odata=nometadata"
-          }
+          },
+          testConfig
         );
 
         // we expect this to fail, as we are using an invalid key,
@@ -522,7 +548,8 @@ describe("table Entity APIs REST tests", () => {
     const createTableResult = await postToAzurite(
       "Tables",
       body,
-      createTableHeaders
+      createTableHeaders,
+      testConfig
     );
     assert.strictEqual(createTableResult.status, 201);
 
@@ -536,7 +563,8 @@ describe("table Entity APIs REST tests", () => {
           version: "",
           "x-ms-client-request-id": "1",
           DataServiceVersion: "3"
-        }
+        },
+        testConfig
       );
       assert.strictEqual(patchRequestResult.status, 404);
       // we expect this to fail, as our batch request specifies the etag
@@ -569,7 +597,8 @@ describe("table Entity APIs REST tests", () => {
     const createTableResult = await postToAzurite(
       "Tables",
       body,
-      createTableHeaders
+      createTableHeaders,
+      testConfig
     );
     assert.strictEqual(createTableResult.status, 201);
 
@@ -588,7 +617,8 @@ describe("table Entity APIs REST tests", () => {
       const createEntityResult = await postToAzurite(
         reproFlowsTableName,
         `{"PartitionKey":"${partitionKey}","RowKey":"${rowKey}"}`,
-        createEntityHeaders
+        createEntityHeaders,
+        testConfig
       );
 
       assert.strictEqual(
@@ -607,6 +637,7 @@ describe("table Entity APIs REST tests", () => {
         "Content-Type": "application/json",
         Accept: "application/json;odata=nometadata"
       },
+      testConfig,
       "?%24select=&%24filter=PartitionKey%20eq%20%270%27&%24top=0"
     )
       .catch((getErr) => {
@@ -655,7 +686,8 @@ describe("table Entity APIs REST tests", () => {
     const createTableResult = await postToAzurite(
       "Tables",
       body,
-      createTableHeaders
+      createTableHeaders,
+      testConfig
     );
     assert.strictEqual(createTableResult.status, 201);
 
@@ -673,7 +705,8 @@ describe("table Entity APIs REST tests", () => {
       const firstPutRequestResult = await putToAzurite(
         `${mergeTable}(PartitionKey='9b0afb2e-3be7-4b95-9ce1-45e9a410cc19',RowKey='a')`,
         '{"PartitionKey":"9b0afb2e-3be7-4b95-9ce1-45e9a410cc19","RowKey":"a", "stringValue":"blank"}',
-        testHeaders
+        testHeaders,
+        testConfig
       );
       assert.strictEqual(firstPutRequestResult.status, 204);
       oldEtag = firstPutRequestResult.headers.etag;
@@ -690,7 +723,7 @@ describe("table Entity APIs REST tests", () => {
       );
     }
 
-    const testCases = [
+    const testCases: IfMatchTestCase[] = [
       {
         name: "case 1: Update Entity : PUT with * If-Match.",
         body: "case1",
@@ -830,7 +863,8 @@ describe("table Entity APIs REST tests", () => {
         const testCaseRequestResult = await testCase.restFunction(
           `${mergeTable}(PartitionKey='9b0afb2e-3be7-4b95-9ce1-45e9a410cc19',RowKey='a')`,
           `{"PartitionKey":"9b0afb2e-3be7-4b95-9ce1-45e9a410cc19","RowKey":"a","stringValue":"${testCase.body}"}`,
-          headers
+          headers,
+          testConfig
         );
         assert.strictEqual(
           testCaseRequestResult.status,
@@ -875,7 +909,8 @@ describe("table Entity APIs REST tests", () => {
     const createTableResult = await postToAzurite(
       "Tables",
       body,
-      createTableHeaders
+      createTableHeaders,
+      testConfig
     );
 
     // check if successfully created
@@ -893,7 +928,8 @@ describe("table Entity APIs REST tests", () => {
     const createEntityResult = await postToAzurite(
       reproFlowsTableName,
       `{"PartitionKey":"${partitionKey}","RowKey":"${rowKey}","Value":"01"}`,
-      createEntityHeaders
+      createEntityHeaders,
+      testConfig
     );
     // check if successfully added
     assert.strictEqual(createEntityResult.status, 201);
@@ -906,7 +942,8 @@ describe("table Entity APIs REST tests", () => {
         "x-ms-version": "2018-03-28",
         "x-ms-client-request-id": "7bbeb6b2-a1c7-4fed-8a3c-80f6b3e7db8c",
         accept: "application/json;odata=nometadata"
-      }
+      },
+      testConfig
     );
     // check if successfully returned
     assert.strictEqual(request2Result.status, 200);
@@ -931,7 +968,8 @@ describe("table Entity APIs REST tests", () => {
     const createTableResult = await postToAzurite(
       "Tables",
       body,
-      createTableHeaders
+      createTableHeaders,
+      testConfig
     );
     assert.strictEqual(createTableResult.status, 201);
 
@@ -945,7 +983,8 @@ describe("table Entity APIs REST tests", () => {
     const createEntityResult = await postToAzurite(
       reproFlowsTableName,
       `{"PartitionKey":"${partitionKey}","RowKey":"${rowKey}","Value":"01"}`,
-      createEntityHeaders
+      createEntityHeaders,
+      testConfig
     );
 
     assert.strictEqual(
@@ -982,7 +1021,8 @@ describe("table Entity APIs REST tests", () => {
     const createTableResult = await postToAzurite(
       "Tables",
       body,
-      createTableHeaders
+      createTableHeaders,
+      testConfig
     );
     assert.strictEqual(createTableResult.status, 201);
 
@@ -1003,7 +1043,8 @@ describe("table Entity APIs REST tests", () => {
           "multipart/mixed; boundary=batch_a10acba3-03e0-4200-b4da-a0cd4f0017f6",
         contentLength: 791,
         body: "ReadableStream"
-      }
+      },
+      testConfig
     );
 
     assert.strictEqual(patchRequestResult.status, 202);
@@ -1060,7 +1101,8 @@ interface IfMatchTestCase {
   restFunction: (
     path: string,
     body: string,
-    headers: any
+    headers: any,
+    config: ITableEntityTestConfig
   ) => Promise<AxiosResponse<any, any>>;
   expectedStatus: number;
   expectSuccess: boolean;
