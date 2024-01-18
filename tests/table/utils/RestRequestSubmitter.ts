@@ -37,11 +37,16 @@ export async function standardRestGet(
     );
   }
 
-  const response = await fetch(path, {
+  const response = await fetch(new URL(path, baseUrl).toString(), {
     method: "get",
     headers: headersOut
   });
-  const result = await response.json();
+
+  const result = {
+    status: response.status,
+    statusText: response.statusText,
+    body: await getReadableStreamBody(response)
+  };
   return result;
 }
 
@@ -72,12 +77,31 @@ export async function standardRestPost(
     headers: headersOut,
     body: body
   });
+
   const result = {
     status: response.status,
     statusText: response.statusText,
-    body: response.body
+    body: await getReadableStreamBody(response)
   };
   return result;
+}
+
+async function getReadableStreamBody(response: Response) {
+  const output = await response.body;
+  if (output === null) {
+    throw new Error("Response body is null");
+  }
+  let outputString = "";
+  const reader = output.getReader();
+  let done = false;
+  while (!done) {
+    const { value, done: doneValue } = await reader.read();
+    if (value) {
+      outputString += new TextDecoder("utf-8").decode(value);
+    }
+    done = doneValue;
+  }
+  return outputString;
 }
 
 /**
@@ -134,8 +158,8 @@ function createStringToSignForSharedKeyLite(
       config.accountName,
       config.productionStyleHostName !== undefined ||
         config.productionStyleHostName !== ""
-        ? `/${path.replace(/'/g, "%27")}`
-        : `/${config.accountName}/${path.replace(/'/g, "%27")}`
+        ? `/${path}` // `/${path.replace(/'/g, "%27")}`
+        : `/${config.accountName}/${path}` // `/${config.accountName}/${path.replace(/'/g, "%27")}`
     );
 
   return stringToSign;

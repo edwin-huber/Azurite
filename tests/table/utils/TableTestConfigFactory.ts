@@ -1,4 +1,5 @@
 // Provides configuration for table entity tests
+// allows us to run tests against Azure Storage Emulator or Azure Storage
 
 import { EMULATOR_ACCOUNT_KEY, EMULATOR_ACCOUNT_NAME } from "../../testutils";
 
@@ -18,13 +19,13 @@ class TableEntityTestConfig {
 
 export interface ITableEntityTestConfig {
   testAzure: boolean;
+  enableDebugLog: boolean;
   protocol: string;
+  port: number;
   host: string;
   productionStyleHostName: string;
   productionStyleSecondaryHostName: string;
-  port: number;
   metadataDbPath: string;
-  enableDebugLog: boolean;
   debugLogPath: string;
   accountName: string;
   sharedKey: string;

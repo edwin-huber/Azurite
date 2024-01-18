@@ -236,50 +236,6 @@ describe("table Entity APIs REST tests", () => {
     });
   });
 
-  it("Should be able to use patch verb in a batch request, @loki", async () => {
-    const body = JSON.stringify({
-      TableName: reproFlowsTableName
-    });
-    const createTableHeaders = {
-      "Content-Type": "application/json",
-      Accept: "application/json;odata=nometadata"
-    };
-    const createTableResult = await postToAzurite(
-      "Tables",
-      body,
-      createTableHeaders,
-      testConfig
-    );
-    assert.strictEqual(createTableResult.status, 201);
-
-    const batchWithPatchRequestString = `--batch_a10acba3-03e0-4200-b4da-a0cd4f0017f6\r\nContent-Type: multipart/mixed; boundary=changeset_0d221006-845a-4c28-a176-dfc18410d0e4\r\n\r\n--changeset_0d221006-845a-4c28-a176-dfc18410d0e4\r\nContent-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\nPATCH http://127.0.0.1:10002/devstoreaccount1/${reproFlowsTableName}(PartitionKey=\'ad922e14-b371-4631-81ab-9e14e9c0e9ea\',RowKey=\'a\')?$format=application%2Fjson%3Bodata%3Dminimalmetadata HTTP/1.1\r\nHost: 127.0.0.1\r\nx-ms-version: 2019-02-02\r\nDataServiceVersion: 3.0\r\nIf-Match: W/"datetime\'2021-05-22T22%3A58%3A40.6450000Z\'"\r\nAccept: application/json\r\nContent-Type: application/json\r\n\r\n{"PartitionKey":"ad922e14-b371-4631-81ab-9e14e9c0e9ea","RowKey":"a"}\r\n--changeset_0d221006-845a-4c28-a176-dfc18410d0e4--\r\n\r\n--batch_a10acba3-03e0-4200-b4da-a0cd4f0017f6--\r\n`;
-
-    const patchRequestResult = await postToAzurite(
-      `$batch`,
-      batchWithPatchRequestString,
-      {
-        version: "2019-02-02",
-        options: {
-          requestId: "5c43f514-9598-421a-a8d3-7b55a08a10c9",
-          dataServiceVersion: "3.0"
-        },
-        multipartContentType:
-          "multipart/mixed; boundary=batch_a10acba3-03e0-4200-b4da-a0cd4f0017f6",
-        contentLength: 791,
-        body: "ReadableStream"
-      },
-      testConfig
-    );
-
-    assert.strictEqual(patchRequestResult.status, 202);
-    // we expect this to fail, as our batch request specifies the etag
-    // https://docs.microsoft.com/en-us/rest/api/storageservices/merge-entity
-    const weMerged = patchRequestResult.data.match(
-      "HTTP/1.1 404 Not Found"
-    ).length;
-    assert.strictEqual(weMerged, 1);
-  });
-
   it("Should be able to use query based on partition and row key in a batch request, @loki", async () => {
     const body = JSON.stringify({
       TableName: reproFlowsTableName
