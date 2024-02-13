@@ -1,6 +1,7 @@
 // Provides configuration for table entity tests
 // allows us to run tests against Azure Storage Emulator or Azure Storage
 
+import { configLogger } from "../../../src/common/Logger";
 import { EMULATOR_ACCOUNT_KEY, EMULATOR_ACCOUNT_NAME } from "../../testutils";
 
 class TableEntityTestConfig {
@@ -37,8 +38,8 @@ export default class TableTestConfigFactory {
     enableDebugLog: boolean = false,
     useHTTPS: boolean = false,
     host: string = "127.0.0.1",
-    productionStyleHostName: string = "",
-    productionStyleSecondaryHostName: string = "",
+    productionStyleHostName: string = "devaccountstore1.table.core.windows.net",
+    productionStyleSecondaryHostName: string = "devaccountstore1-secondary.table.core.windows.net",
     tablePort: number = 11002,
     debugLogPath: string = "g:/debug.log",
     metadataDbPath: string = "__tableTestsStorage__"
@@ -57,6 +58,7 @@ export default class TableTestConfigFactory {
     config.productionStyleHostName = productionStyleHostName;
     config.productionStyleSecondaryHostName = productionStyleSecondaryHostName;
     config.enableDebugLog = enableDebugLog;
+    configLogger(enableDebugLog);
     config.debugLogPath = debugLogPath;
     config.metadataDbPath = metadataDbPath;
     return config;

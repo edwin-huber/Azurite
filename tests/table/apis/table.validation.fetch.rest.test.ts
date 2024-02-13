@@ -5,7 +5,6 @@
 // special care is needed to replace etags and folders when used
 
 import * as assert from "assert";
-import { configLogger } from "../../../src/common/Logger";
 import TableServer from "../../../src/table/TableServer";
 import { getUniqueName } from "../../testutils";
 import TableTestServerFactory from "../utils/TableTestServerFactory";
@@ -13,28 +12,36 @@ import TableTestConfigFactory, {
   ITableEntityTestConfig
 } from "../utils/TableTestConfigFactory";
 import {
+  createTableForREST,
+  generateBaseUrl,
   standardRestGet,
   standardRestPost
 } from "../utils/RestRequestSubmitter";
 import dns = require("dns");
-// Set true to enable debug log
-configLogger(false);
 
+// create a .env file in the root of the poject (same level as the .npmignore file
+// and call create(true) to run tests against Azure
+// turn on second parameter to see debug logs
 const testConfig: ITableEntityTestConfig = TableTestConfigFactory.create(
-  false,
-  true
+  false, // testAzure
+  false // turn on debug logging
 );
 
-const createTableHeaders = {
-  "Content-Type": "application/json",
-  "x-ms-version": "2020-04-08",
-  Accept: "application/json;odata=fullmetadata"
+// We must include the x-ms-version header;
+// the header's value must be set to 2009-04-14 or newer.
+const testTableAPIHeaders = {
+  "content-type": "application/json",
+  "x-ms-version": "2020-12-06",
+  dataserviceversion: "3.0",
+  maxdataserviceversion: "3.0;NetFx",
+  accept: "application/json;odata=fullmetadata"
 };
 
 describe("table Entity APIs REST tests", () => {
   let server: TableServer;
 
   let reproFlowsTableName: string = getUniqueName("flows");
+  let baseUrl = "";
 
   before(async () => {
     server = new TableTestServerFactory().createServer({
@@ -55,29 +62,16 @@ describe("table Entity APIs REST tests", () => {
   beforeEach(() => {
     // in order to run tests without cleaning up, I am replacing the table name with a unique name each time
     reproFlowsTableName = getUniqueName("flows");
+    baseUrl = generateBaseUrl(testConfig);
   });
 
-  // https://github.com/Azure/Azurite/issues/754
-  it.only("Should be able to create a table, @loki", async () => {
-    // first create the table for these tests
-    const body = JSON.stringify({
-      TableName: reproFlowsTableName
-    });
-    const createTableResult: {
-      status: string;
-      statusText: string;
-      body: string;
-    } = await standardRestPost(
-      formatHostString(),
-      "Tables",
-      createTableHeaders,
-      body,
-      testConfig
-    );
-    assert.strictEqual(
-      createTableResult.status,
-      201,
-      `Unexpected status code ${createTableResult.status}, "${createTableResult.statusText}", assuming we failed to create the table`
+  it("Should be able to create a table, @loki", async () => {
+    const baseUrl = generateBaseUrl(testConfig);
+    await createTableForREST(
+      testConfig,
+      testTableAPIHeaders,
+      reproFlowsTableName,
+      baseUrl
     );
   });
 
@@ -92,9 +86,9 @@ describe("table Entity APIs REST tests", () => {
       statusText: string;
       body: string;
     } = await standardRestPost(
-      formatHostString(),
+      baseUrl,
       "Tables",
-      createTableHeaders,
+      testTableAPIHeaders,
       body,
       testConfig
     );
@@ -116,9 +110,9 @@ describe("table Entity APIs REST tests", () => {
       statusText: string;
       body: string;
     } = await standardRestPost(
-      formatHostString(),
+      baseUrl,
       "Tables",
-      createTableHeaders,
+      testTableAPIHeaders,
       body,
       testConfig
     );
@@ -140,9 +134,9 @@ describe("table Entity APIs REST tests", () => {
       statusText: string;
       body: string;
     } = await standardRestPost(
-      formatHostString(),
+      baseUrl,
       "Tables",
-      createTableHeaders,
+      testTableAPIHeaders,
       body,
       testConfig
     );
@@ -164,9 +158,9 @@ describe("table Entity APIs REST tests", () => {
       statusText: string;
       body: string;
     } = await standardRestPost(
-      formatHostString(),
+      baseUrl,
       "Tables",
-      createTableHeaders,
+      testTableAPIHeaders,
       body,
       testConfig
     );
@@ -188,9 +182,9 @@ describe("table Entity APIs REST tests", () => {
       statusText: string;
       body: string;
     } = await standardRestPost(
-      formatHostString(),
+      baseUrl,
       "Tables",
-      createTableHeaders,
+      testTableAPIHeaders,
       body,
       testConfig
     );
@@ -212,9 +206,9 @@ describe("table Entity APIs REST tests", () => {
       statusText: string;
       body: string;
     } = await standardRestPost(
-      formatHostString(),
+      baseUrl,
       "Tables",
-      createTableHeaders,
+      testTableAPIHeaders,
       body,
       testConfig
     );
@@ -233,9 +227,9 @@ describe("table Entity APIs REST tests", () => {
       statusText: string;
       body: string;
     } = await standardRestPost(
-      formatHostString(),
+      baseUrl,
       "Tables",
-      createTableHeaders,
+      testTableAPIHeaders,
       body2,
       testConfig
     );
@@ -261,9 +255,9 @@ describe("table Entity APIs REST tests", () => {
       statusText: string;
       body: string;
     } = await standardRestPost(
-      formatHostString(),
+      baseUrl,
       "Tables",
-      createTableHeaders,
+      testTableAPIHeaders,
       body1,
       testConfig
     );
@@ -282,9 +276,9 @@ describe("table Entity APIs REST tests", () => {
       statusText: string;
       body: string;
     } = await standardRestPost(
-      formatHostString(),
+      baseUrl,
       "Tables",
-      createTableHeaders,
+      testTableAPIHeaders,
       body2,
       testConfig
     );
@@ -302,9 +296,9 @@ describe("table Entity APIs REST tests", () => {
       statusText: string;
       body: string;
     } = await standardRestPost(
-      formatHostString(),
+      baseUrl,
       "Tables",
-      createTableHeaders,
+      testTableAPIHeaders,
       body3,
       testConfig
     );
@@ -333,9 +327,9 @@ describe("table Entity APIs REST tests", () => {
                   statusText: string;
                   body: string;
                 } = await standardRestPost(
-                  formatProdHostString(),
+                  generateBaseUrl(testConfig, true, false),
                   "Tables",
-                  createTableHeaders,
+                  testTableAPIHeaders,
                   body,
                   testConfig
                 );
@@ -352,10 +346,6 @@ describe("table Entity APIs REST tests", () => {
           },
           () => {
             // Cannot perform this test. We need devstoreaccount1-secondary.blob.localhost to resolve to 127.0.0.1.
-            // On Linux, this should just work,
-            // On Windows, we can't spoof DNS record for specific process.
-            // So we have options of running our own DNS server (overkill),
-            // or editing hosts files (machine global operation; and requires running as admin).
             // So skip the test case.
             assert.ok(
               `Skipping test case - it needs ${testConfig.productionStyleHostName} to be resolvable`
@@ -380,7 +370,7 @@ describe("table Entity APIs REST tests", () => {
               const body = JSON.stringify({
                 TableName: tableName
               });
-              const createTableHeaders = {
+              const testTableAPIHeaders = {
                 "Content-Type": "application/json",
                 Accept: "application/json;odata=nometadata"
               };
@@ -390,9 +380,9 @@ describe("table Entity APIs REST tests", () => {
                   statusText: string;
                   body: string;
                 } = await standardRestPost(
-                  formatProdHostString(),
+                  generateBaseUrl(testConfig, true, true),
                   "Tables",
-                  createTableHeaders,
+                  testTableAPIHeaders,
                   body,
                   testConfig
                 );
@@ -401,7 +391,7 @@ describe("table Entity APIs REST tests", () => {
                 let tablesList = await standardRestGet(
                   testConfig.productionStyleSecondaryHostName,
                   "Tables",
-                  createTableHeaders,
+                  testTableAPIHeaders,
                   testConfig
                 );
                 assert.strictEqual(tablesList.status, 200);
@@ -417,10 +407,6 @@ describe("table Entity APIs REST tests", () => {
           },
           () => {
             // Cannot perform this test. We need devstoreaccount1-secondary.blob.localhost to resolve to 127.0.0.1.
-            // On Linux, this should just work,
-            // On Windows, we can't spoof DNS record for specific process.
-            // So we have options of running our own DNS server (overkill),
-            // or editing hosts files (machine global operation; and requires running as admin).
             // So skip the test case.
             assert.ok(
               `Skipping test case - it needs ${testConfig.productionStyleSecondaryHostName} to be resolvable`
@@ -430,15 +416,3 @@ describe("table Entity APIs REST tests", () => {
     }
   });
 });
-
-function formatHostString(): string {
-  return `${testConfig.protocol === "https" ? "https" : "http"}://${
-    testConfig.host
-  }`;
-}
-
-function formatProdHostString(): string {
-  return `${testConfig.protocol === "https" ? "https" : "http"}://${
-    testConfig.productionStyleHostName
-  }`;
-}

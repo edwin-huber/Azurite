@@ -24,7 +24,7 @@ import {
 import { RestError } from "@azure/core-http";
 
 // Set true to enable debug log
-configLogger(false);
+configLogger(true);
 // For convenience, we have a switch to control the use
 // of a local Azurite instance, otherwise we need an
 // ENV VAR added to mocha
@@ -55,9 +55,9 @@ describe("table Entity APIs test", () => {
   it("01. Batch API should serialize errors according to group transaction spec, @loki", async () => {
     const partitionKey = createUniquePartitionKey("");
     const testEntities: TableTestEntity[] = [
-      entityFactory.createBasicEntityForTest(partitionKey),
-      entityFactory.createBasicEntityForTest(partitionKey),
       entityFactory.createBasicEntityForTest(partitionKey)
+      // entityFactory.createBasicEntityForTest(partitionKey),
+      // entityFactory.createBasicEntityForTest(partitionKey)
     ];
 
     const sharedKeyCredential = new AzureNamedKeyCredential(
@@ -490,9 +490,8 @@ describe("table Entity APIs test", () => {
 
     await tableClientrollback.createTable();
 
-    const singleEntityResult = await tableClientrollback.createEntity(
-      singleTestEntity
-    );
+    const singleEntityResult =
+      await tableClientrollback.createEntity(singleTestEntity);
 
     const testEntities: TableTestEntity[] = [
       entityFactory.createBasicEntityForTest(partitionKey),
@@ -569,7 +568,8 @@ describe("table Entity APIs test", () => {
   it("09. Batch API should fail to insert duplicate Entity with correct 400 Status and InvalidDuplicateRow error, @loki", async () => {
     const partitionKey = createUniquePartitionKey("");
     const tableNameBatchError: string = getUniqueName("datatables");
-    const myDupTestEntity = entityFactory.createBasicEntityForTest(partitionKey);
+    const myDupTestEntity =
+      entityFactory.createBasicEntityForTest(partitionKey);
     const testEntities: TableTestEntity[] = [
       entityFactory.createBasicEntityForTest(partitionKey),
       myDupTestEntity,

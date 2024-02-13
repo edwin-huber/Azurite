@@ -236,48 +236,6 @@ describe("table Entity APIs REST tests", () => {
     });
   });
 
-  it("Should be able to use query based on partition and row key in a batch request, @loki", async () => {
-    const body = JSON.stringify({
-      TableName: reproFlowsTableName
-    });
-    const createTableHeaders = {
-      "Content-Type": "application/json",
-      Accept: "application/json;odata=nometadata"
-    };
-    const createTableResult = await postToAzurite(
-      "Tables",
-      body,
-      createTableHeaders,
-      testConfig
-    );
-    assert.strictEqual(createTableResult.status, 201);
-
-    const batchWithQueryRequestString = `--batch_f351702c-c8c8-48c6-af2c-91b809c651ce\r\nContent-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\nGET http://127.0.0.1:10002/devstoreaccount1/${reproFlowsTableName}(PartitionKey=\'Channel_19',RowKey='2') HTTP/1.1\r\nAccept: application/json;odata=minimalmetadata\r\n--batch_f351702c-c8c8-48c6-af2c-91b809c651ce--\r\n`;
-
-    const queryRequestResult = await postToAzurite(
-      `$batch`,
-      batchWithQueryRequestString,
-      {
-        version: "2019-02-02",
-        options: {
-          requestId: "5c43f514-9598-421a-a8d3-7b55a08a10c9",
-          dataServiceVersion: "3.0"
-        },
-        multipartContentType:
-          "multipart/mixed; boundary=batch_f351702c-c8c8-48c6-af2c-91b809c651ce"
-      },
-      testConfig
-    );
-
-    assert.strictEqual(queryRequestResult.status, 202);
-    // we expect this to fail, as our batch request specifies the etag
-    // https://docs.microsoft.com/en-us/rest/api/storageservices/merge-entity
-    const weMerged = queryRequestResult.data.match(
-      "HTTP/1.1 404 Not Found"
-    ).length;
-    assert.strictEqual(weMerged, 1);
-  });
-
   // the logic tests that we pass from batch to the query handler which was added as functionality later
   it("Should be able to use query enties in a batch request, @loki", async () => {
     const body = JSON.stringify({

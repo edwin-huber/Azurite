@@ -17,7 +17,7 @@ import { TestEntity } from "../models/TestEntity";
 import { AzureStorageSDKEntityFactory } from "../utils/AzureStorageSDKEntityFactory";
 
 // Set true to enable debug log
-configLogger(false);
+configLogger(true);
 // For convenience, we have a switch to control the use
 // of a local Azurite instance, otherwise we need an
 // ENV VAR called AZURE_TABLE_STORAGE added to mocha
