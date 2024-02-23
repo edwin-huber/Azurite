@@ -28,10 +28,13 @@ export async function standardRestGet(
 
   headersOut = addAuthHeaders(config, headersOut, baseUrl, path, headers);
 
-  const response = await fetch(new URL(path, baseUrl).toString(), {
-    method: "get",
-    headers: headersOut
-  });
+  const response = await fetch(
+    new URL(path, baseUrl).toString() + queryString,
+    {
+      method: "get",
+      headers: headersOut
+    }
+  );
 
   const result = {
     status: response.status,
@@ -63,6 +66,45 @@ export async function standardRestPost(
     status: response.status,
     statusText: response.statusText,
     body: await getReadableStreamBody(response)
+  };
+  return result;
+}
+
+export async function standardRestPatch(
+  baseUrl: string,
+  path: string,
+  headers: any,
+  body: string,
+  config: ITableEntityTestConfig,
+  queryString: string = ""
+): Promise<any> {
+  let headersOut = headers;
+
+  headersOut = addAuthHeaders(
+    config,
+    headersOut,
+    baseUrl,
+    path + queryString,
+    headers
+  );
+  const targetUrl = new URL(path + queryString, baseUrl).toString();
+  const response = await fetch(targetUrl, {
+    method: "PATCH",
+    headers: headersOut,
+    body: body
+  });
+
+  let bodyString = "";
+  try {
+    bodyString = await getReadableStreamBody(response);
+  } catch (e) {
+    // we are expecting a 204 response with no body
+  }
+
+  const result = {
+    status: response.status,
+    statusText: response.statusText,
+    body: bodyString
   };
   return result;
 }
@@ -323,13 +365,16 @@ export function getURLQueries(url: string): { [key: string]: string } {
 /**
  * Currently builds a simple batch operation string for use in REST tests
  * later we can add more complex operations
- * or deform the request to test error handling
+ * or deform the request to test error handling.
+ * Alternative headers are input as a string in the serialized MIME format,
+ * and the default is an empty string.
  *
  * @param {boolean} testAzure
  * @param {string} hostString
  * @param {string} tableName
  * @param {string} [verb="POST"]
  * @param {string} [entityJsonString='{"PartitionKey":"1", "RowKey":"1", "intValue":9, "stringValue":"foo"}']
+ * @param {string} [entityHeaders=""]
  * @return {*}  {string}
  */
 export function batchOperationStringBuilder(
@@ -337,27 +382,33 @@ export function batchOperationStringBuilder(
   hostString: string,
   tableName: string,
   verb: string = "POST",
-  entityJsonString: string = '{"PartitionKey":"1", "RowKey":"1", "intValue":9, "stringValue":"foo"}'
+  entityJsonString: string = '{"PartitionKey":"1", "RowKey":"1", "intValue":9, "stringValue":"foo"}',
+  entityHeaders: string = ""
 ): string {
-  let getRequestPath = "";
+  let requestPath = "";
   let entityJsonStringForBatch = entityJsonString;
   let entityRequestHeaders = "";
   if (verb === "GET") {
-    getRequestPath = `${entityJsonString}`;
+    requestPath = `${entityJsonString}`;
     entityJsonStringForBatch = "";
     entityRequestHeaders = "Accept: application/json;odata=minimalmetadata";
   } else if (verb == "PATCH") {
     const entityObject = JSON.parse(entityJsonString);
-    getRequestPath = `(PartitionKey='${entityObject.PartitionKey}',RowKey='${entityObject.RowKey}')`;
+    requestPath = `(PartitionKey='${entityObject.PartitionKey}',RowKey='${entityObject.RowKey}')`;
     entityRequestHeaders =
       "Content-Type: application/json\r\nAccept: application/json;odata=minimalmetadata\r\nx-ms-version: 2020-12-06\r\nPrefer: return-no-content\r\nDataServiceVersion: 3.0;";
   } else {
     entityRequestHeaders =
       "Content-Type: application/json\r\nAccept: application/json;odata=minimalmetadata\r\nx-ms-version: 2020-12-06\r\nPrefer: return-no-content\r\nDataServiceVersion: 3.0;";
   }
+  // we overwrite the headers with the input headers if they are not empty
+  // this allows us to test "{if-match: *}" and other headers
+  if (entityHeaders !== "") {
+    entityRequestHeaders = entityHeaders;
+  }
   const batchOperationString = `Content-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\n${verb} ${hostString}/${
     testAzure ? "" : "devstoreaccount1/"
-  }${tableName}${getRequestPath} HTTP/1.1\r\n${entityRequestHeaders}\r\n\r\n\r\n${entityJsonStringForBatch}`;
+  }${tableName}${requestPath} HTTP/1.1\r\n${entityRequestHeaders}\r\n\r\n\r\n${entityJsonStringForBatch}`;
 
   return batchOperationString;
 }
@@ -379,7 +430,6 @@ export function batchBodyBuilder(
   // create a new guid as a const for use as the changeset boundary
   // https://docs.microsoft.com/en-us/rest/api/storageservices/performing-entity-group-transactions
   const changesetBoundaryGuid = uuid.v4().toString();
-  // return `--batch_${batchBoundaryGuid}\r\nContent-Type: multipart/mixed; boundary=changeset_${changesetBoundaryGuid}\r\n\r\n--changeset_${changesetBoundaryGuid}\r\nContent-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\nPATCH ${hostString}/${entityTestTableName}(PartitionKey=\'ad922e14-b371-4631-81ab-9e14e9c0e9ea\',RowKey=\'a\')?$format=application%2Fjson%3Bodata%3Dminimalmetadata HTTP/1.1\r\nHost: ${testConfig.host}\r\nx-ms-version: 2019-02-02\r\nDataServiceVersion: 3.0\r\nIf-Match: *\r\nAccept: application/json\r\nContent-Type: application/json\r\n\r\n{"PartitionKey":"ad922e14-b371-4631-81ab-9e14e9c0e9ea","RowKey":"a"}\r\n--changeset_${changesetBoundaryGuid}--\r\n\r\n--batch_${batchBoundaryGuid}--\r\n`;
   return `--batch_${batchBoundaryGuid}\r\ncontent-type: multipart/mixed; boundary=changeset_${changesetBoundaryGuid}\r\n\r\n\r\n--changeset_${changesetBoundaryGuid}\r\n${requestString}\r\n--changeset_${changesetBoundaryGuid}--\r\n--batch_${batchBoundaryGuid}--\r\n`;
 }
 
@@ -400,7 +450,6 @@ export function batchBodyBuilderForQuery(
   // create a new guid as a const for use as the changeset boundary
   // https://docs.microsoft.com/en-us/rest/api/storageservices/performing-entity-group-transactions
 
-  // return `--batch_${batchBoundaryGuid}\r\nContent-Type: multipart/mixed; boundary=changeset_${changesetBoundaryGuid}\r\n\r\n--changeset_${changesetBoundaryGuid}\r\nContent-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\nPATCH ${hostString}/${entityTestTableName}(PartitionKey=\'ad922e14-b371-4631-81ab-9e14e9c0e9ea\',RowKey=\'a\')?$format=application%2Fjson%3Bodata%3Dminimalmetadata HTTP/1.1\r\nHost: ${testConfig.host}\r\nx-ms-version: 2019-02-02\r\nDataServiceVersion: 3.0\r\nIf-Match: *\r\nAccept: application/json\r\nContent-Type: application/json\r\n\r\n{"PartitionKey":"ad922e14-b371-4631-81ab-9e14e9c0e9ea","RowKey":"a"}\r\n--changeset_${changesetBoundaryGuid}--\r\n\r\n--batch_${batchBoundaryGuid}--\r\n`;
   return `--batch_${batchBoundaryGuid}\r\n${requestString}\r\n--batch_${batchBoundaryGuid}--\r\n`;
 }
 
@@ -493,7 +542,7 @@ export async function getSimpleEntityForREST(
   partitionKey: string = "1",
   rowKey: string = "1",
   valueToCheck: string = "foo"
-) {
+): Promise<string> {
   const getEntityResult: {
     status: string;
     statusText: string;
@@ -516,6 +565,8 @@ export async function getSimpleEntityForREST(
     valueToCheck,
     `Unexpected value when fetching entity ${entityTestTableName}, entity value ${entity.Value} was not equal to "${valueToCheck}"`
   );
+
+  return entity["odata.etag"];
 }
 
 /**
@@ -564,7 +615,7 @@ export function generateBaseUrl(
  * @param {*} additionalHeaders
  * @return {*}  {*}
  */
-export function updateBatchHeaders(headers: any, additionalHeaders: any): any {
+export function updateHeaders(headers: any, additionalHeaders: any): any {
   let headersCopy = Object.assign({}, headers);
 
   for (const key in additionalHeaders) {

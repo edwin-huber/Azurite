@@ -20,8 +20,10 @@ import {
   formatHostString,
   generateBaseUrl,
   getSimpleEntityForREST,
+  standardRestGet,
+  standardRestPatch,
   standardRestPost,
-  updateBatchHeaders
+  updateHeaders
 } from "../utils/RestRequestSubmitter";
 import uuid from "uuid";
 
@@ -30,7 +32,7 @@ import uuid from "uuid";
 // turn on second parameter to see debug logs
 const testConfig: ITableEntityTestConfig = TableTestConfigFactory.create(
   false, // testAzure
-  false // turn on debug logging
+  true // turn on debug logging
 );
 
 // We must include the x-ms-version header;
@@ -70,7 +72,7 @@ describe("table Entity APIs REST tests", () => {
   });
 
   // this validates the 3 functions used as the basis for further tests
-  it("Should be able to create a table and an entity, @loki", async () => {
+  it("01. Should be able to create a table and an entity, @loki", async () => {
     const baseUrl = generateBaseUrl(testConfig);
     await createTableForREST(
       testConfig,
@@ -92,7 +94,7 @@ describe("table Entity APIs REST tests", () => {
     );
   });
 
-  it("Should be able to use a simple batch request, @loki", async () => {
+  it("02. Should be able to use a simple batch request, @loki", async () => {
     const baseUrl = generateBaseUrl(testConfig);
     await createTableForREST(
       testConfig,
@@ -121,10 +123,7 @@ describe("table Entity APIs REST tests", () => {
       requestId: uuid.v4().toString()
     };
 
-    const batchHeaders = updateBatchHeaders(
-      entityTestHeaders,
-      additionalHeaders
-    );
+    const batchHeaders = updateHeaders(entityTestHeaders, additionalHeaders);
 
     const patchRequestResult = await standardRestPost(
       baseUrl,
@@ -141,7 +140,7 @@ describe("table Entity APIs REST tests", () => {
     assert.strictEqual(wePUT, 1);
   });
 
-  it("Should be able to use patch verb in a batch request, @loki", async () => {
+  it("03. Should be able to use patch verb in a batch request, @loki", async () => {
     const baseUrl = generateBaseUrl(testConfig);
     await createTableForREST(
       testConfig,
@@ -183,10 +182,7 @@ describe("table Entity APIs REST tests", () => {
       requestId: uuid.v4().toString()
     };
 
-    const batchHeaders = updateBatchHeaders(
-      entityTestHeaders,
-      additionalHeaders
-    );
+    const batchHeaders = updateHeaders(entityTestHeaders, additionalHeaders);
 
     const patchRequestResult = await standardRestPost(
       baseUrl,
@@ -209,7 +205,7 @@ describe("table Entity APIs REST tests", () => {
     );
   });
 
-  it("Should be able to use query based on partition and row key in a batch request, @loki", async () => {
+  it("04. Should be able to use query based on partition and row key in a batch request, @loki", async () => {
     // create an check that entity exists
     const baseUrl = generateBaseUrl(testConfig);
     await createTableForREST(
@@ -256,10 +252,7 @@ describe("table Entity APIs REST tests", () => {
       requestId: uuid.v4().toString()
     };
 
-    const batchHeaders = updateBatchHeaders(
-      entityTestHeaders,
-      additionalHeaders
-    );
+    const batchHeaders = updateHeaders(entityTestHeaders, additionalHeaders);
 
     const batchGetRequestResult = await standardRestPost(
       baseUrl,
@@ -274,5 +267,242 @@ describe("table Entity APIs REST tests", () => {
     // https://docs.microsoft.com/en-us/rest/api/storageservices/merge-entity
     const weGot = batchGetRequestResult.body.match('"RowKey":"1"')?.length;
     assert.strictEqual(weGot, 1);
+  });
+
+  it.only("05. Upsert with wrong etag should fail in batch request, @loki", async () => {
+    const baseUrl = generateBaseUrl(testConfig);
+    await createTableForREST(
+      testConfig,
+      entityTestHeaders,
+      entityTestTableName,
+      baseUrl
+    );
+
+    // first create our default entity to overwrite
+    await createSimpleEntityForREST(
+      testConfig,
+      entityTestHeaders,
+      entityTestTableName,
+      baseUrl
+    );
+    await getSimpleEntityForREST(
+      testConfig,
+      entityTestHeaders,
+      entityTestTableName,
+      baseUrl
+    );
+
+    // const upsertBatchRequest = `--batch_adc25243-680a-46d2-bf48-0c112b5e8079\r\nContent-Type: multipart/mixed; boundary=changeset_b616f3c3-99ac-4bf7-8053-94b423345207\r\n\r\n--changeset_b616f3c3-99ac-4bf7-8053-94b423345207\r\nContent-Type: application/http\r\nContent-Transfer-Encoding: binary\r\n\r\nPUT http://127.0.0.1:10002/devstoreaccount1/${entityTestTableName}(PartitionKey=\'1\',RowKey=\'1\')?$format=application%2Fjson%3Bodata%3Dminimalmetadata HTTP/1.1\r\nHost: 127.0.0.1\r\nx-ms-version: 2019-02-02\r\nDataServiceVersion: 3.0\r\nIf-Match: W/"datetime\'2022-02-23T07%3A21%3A33.9580000Z\'"\r\nAccept: application/json\r\nContent-Type: application/json\r\n\r\n{"PartitionKey":"1","RowKey":"1"}\r\n--changeset_b616f3c3-99ac-4bf7-8053-94b423345207--\r\n\r\n--batch_adc25243-680a-46d2-bf48-0c112b5e8079--\r\n`;
+    // const upsertBatchHeaders = {
+    //   "x-ms-version": "2019-02-02",
+    //   options: {
+    //     requestId: "38c433f9-5af4-4890-8082-d1380605ed8e",
+    //     dataServiceVersion: "3.0"
+    //   },
+    //   "Content-Type":
+    //     "multipart/mixed; boundary=batch_adc25243-680a-46d2-bf48-0c112b5e8079"
+    // };
+    // ###
+
+    const hostString = formatHostString(testConfig);
+
+    const batchBoundaryGuid = uuid.v4().toString();
+    const badbatchHeader = `Host: ${hostString}\r\nx-ms-version: 2019-02-02\r\nDataServiceVersion: 3.0\r\nIf-Match: W/"datetime\'2022-02-23T07%3A21%3A33.9580000Z\'"\r\nAccept: application/json\r\nContent-Type: application/json`;
+    const batchOperationString = batchOperationStringBuilder(
+      testConfig.testAzure,
+      hostString,
+      entityTestTableName,
+      "PUT",
+      '{"PartitionKey":"1", "RowKey":"1", "intValue":9, "stringValue":"qux"}',
+      badbatchHeader
+    );
+    const batchWithPatchRequestString = batchBodyBuilder(
+      hostString,
+      entityTestTableName,
+      batchBoundaryGuid,
+      batchOperationString
+    );
+
+    const additionalHeaders = {
+      "content-type": `multipart/mixed; boundary=batch_${batchBoundaryGuid}`,
+      requestId: uuid.v4().toString()
+    };
+
+    const batchHeaders = updateHeaders(entityTestHeaders, additionalHeaders);
+
+    const upsertBatchResult = await standardRestPost(
+      baseUrl,
+      `$batch`,
+      batchHeaders,
+      batchWithPatchRequestString,
+      testConfig
+    );
+
+    assert.strictEqual(upsertBatchResult.status, 202, "Batch Upsert Failed.");
+    assert.strictEqual(
+      upsertBatchResult.body.match(/\s412\sPrecondition\sFailed/)?.length,
+      1,
+      "Did not get the expected error in batch response."
+    );
+  });
+
+  // validation based on:
+  // https://docs.microsoft.com/en-us/rest/api/storageservices/Understanding-the-Table-Service-Data-Model#characters-disallowed-in-key-fields
+  it("06. Should not accept invalid characters in partitionkey or rowKey, @loki", async () => {
+    const baseUrl = generateBaseUrl(testConfig);
+    await createTableForREST(
+      testConfig,
+      entityTestHeaders,
+      entityTestTableName,
+      baseUrl
+    );
+
+    const invalidKeyRequests: string[] = [
+      '{"PartitionKey":"doNotAllow/ForwardSlash","RowKey":"1","value":"val1"}',
+      '{"PartitionKey":"1","RowKey":"doNotAllow/ForwardSlash","value":"val1"}',
+      '{"PartitionKey":"doNotAllow#hash","RowKey":"1","value":"val1"}',
+      '{"PartitionKey":"1","RowKey":"doNotAllow#hash","value":"val1"}',
+      '{"PartitionKey":"doNotAllow?questionmark","RowKey":"1","value":"val1"}',
+      '{"PartitionKey":"1","RowKey":"doNotAllow?questionmark","value":"val1"}',
+      '{"PartitionKey":"doNotAllow\\backslash","RowKey":"1","value":"val1"}'
+    ];
+    // need to test u0000 to u001f and u007f to u009f
+    for (let i = 0x0; i <= 0x1f; i++) {
+      invalidKeyRequests.push(
+        `{"PartitionKey":"doNotAllow-\\u${i
+          .toString(16)
+          .padStart(4, "0")
+          .toUpperCase()}unicodecontrol","RowKey":"1","value":"val1"}`
+      );
+      invalidKeyRequests.push(
+        `{"PartitionKey":"1","RowKey":"doNotAllow-\\u${i
+          .toString(16)
+          .padStart(4, "0")
+          .toUpperCase()}unicodecontrol","value":"val1"}`
+      );
+    }
+    for (let i = 0x007f; i <= 0x9f; i++) {
+      invalidKeyRequests.push(
+        `{"PartitionKey":"doNotAllow-\\u${i
+          .toString(16)
+          .padStart(4, "0")
+          .toUpperCase()}unicodecontrol","RowKey":"1","value":"val1"}`
+      );
+      invalidKeyRequests.push(
+        `{"PartitionKey":"1","RowKey":"doNotAllow-\\u${i
+          .toString(16)
+          .padStart(4, "0")
+          .toUpperCase()}unicodecontrol","value":"val1"}`
+      );
+    }
+
+    for (const invalidKeyRequest of invalidKeyRequests) {
+      try {
+        const queryRequestResult = await standardRestPost(
+          baseUrl,
+          entityTestTableName,
+          entityTestHeaders,
+          invalidKeyRequest,
+          testConfig
+        );
+
+        assert.strictEqual(queryRequestResult.status, 400);
+      } catch (err: any) {
+        if (err.response !== undefined) {
+          assert.strictEqual(
+            err.response.status,
+            400,
+            `We did not get the expected status code, we got: ${err} for request ${invalidKeyRequest}`
+          );
+        }
+      }
+    }
+  });
+
+  it("07. Should fail to update using patch verb if entity does not exist, @loki", async () => {
+    const baseUrl = generateBaseUrl(testConfig);
+    await createTableForREST(
+      testConfig,
+      entityTestHeaders,
+      entityTestTableName,
+      baseUrl
+    );
+
+    await createSimpleEntityForREST(
+      testConfig,
+      entityTestHeaders,
+      entityTestTableName,
+      baseUrl
+    );
+
+    try {
+      const patchRequestResult = await standardRestPatch(
+        baseUrl,
+        entityTestTableName,
+        updateHeaders(entityTestHeaders, { "If-Match": "*" }),
+        '{"PartitionKey":"2","RowKey":"1"}',
+        testConfig,
+        "(PartitionKey='2',RowKey='1')"
+      );
+
+      assert.strictEqual(
+        patchRequestResult.status,
+        404,
+        "Patch request did not fail with 404."
+      );
+      // we expect this to fail, as our batch request specifies the etag
+      // https://docs.microsoft.com/en-us/rest/api/storageservices/merge-entity
+    } catch (err: any) {
+      assert.strictEqual(err.actual, 404, err.message);
+    }
+  });
+
+  // https://github.com/Azure/Azurite/issues/1428
+  it("08. Should not receive any results when querying with filter and top = 0, @loki", async () => {
+    const baseUrl = generateBaseUrl(testConfig);
+    await createTableForREST(
+      testConfig,
+      entityTestHeaders,
+      entityTestTableName,
+      baseUrl
+    );
+
+    for (let i = 0; i < 10; i++) {
+      await createSimpleEntityForREST(
+        testConfig,
+        entityTestHeaders,
+        entityTestTableName,
+        baseUrl,
+        "1",
+        i.toString(),
+        i.toString()
+      );
+    }
+
+    // this is the query from storage explorer based on the repro in the issue:
+    // GET /devstoreaccount1/test01?%24select=&%24filter=PartitionKey%20eq%20%270%27&%24top=0 HTTP/1.1" 200 -
+    await standardRestGet(
+      baseUrl,
+      entityTestTableName,
+      entityTestHeaders,
+      testConfig,
+      "?$select=&$filter=PartitionKey%20eq%20%271%27&$top=0"
+    )
+      .catch((getErr) => {
+        assert.strictEqual(
+          getErr.response.status,
+          200,
+          "We should not error on query!"
+        );
+      })
+      .then((response) => {
+        if (response) {
+          assert.strictEqual(
+            response.status,
+            200,
+            `${response.status} was not expected status code for query!`
+          );
+        }
+      });
   });
 });
